@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ─── Shell compatibility check ────────────────────────────────────────────────
+# Works on bash 3.2+ (macOS default) and bash 4/5 (Linux, Homebrew bash)
+# Does NOT require bash 4 features (no declare -A, no ${var,,}, etc.)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Azure DevOps Release Notes MCP Plugin — Interactive Setup Wizard
 # ─────────────────────────────────────────────────────────────────────────────
@@ -122,14 +126,10 @@ preflight_checks() {
 }
 
 # ─── Load existing .env values as defaults ────────────────────────────────────
+# Uses grep instead of associative arrays — compatible with bash 3.2 (macOS default)
 
 load_existing_env() {
-  declare -gA EXISTING_ENV
   if [[ -f "$ENV_FILE" ]]; then
-    while IFS='=' read -r key val; do
-      [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
-      EXISTING_ENV["$key"]="${val//\"/}"
-    done < "$ENV_FILE"
     print_info "Found existing .env — pre-filling defaults."
   fi
 }
@@ -137,7 +137,15 @@ load_existing_env() {
 get_env_default() {
   local key="$1"
   local fallback="${2:-}"
-  echo "${EXISTING_ENV[$key]:-$fallback}"
+  if [[ -f "$ENV_FILE" ]]; then
+    local val
+    val=$(grep -E "^${key}=" "$ENV_FILE" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+    if [[ -n "$val" ]]; then
+      echo "$val"
+      return
+    fi
+  fi
+  echo "$fallback"
 }
 
 # ─── Collect Azure DevOps config ──────────────────────────────────────────────
