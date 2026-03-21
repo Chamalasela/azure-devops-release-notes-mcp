@@ -431,13 +431,76 @@ print_summary() {
   echo -e "  ${DIM}Claude config: $CLAUDE_CONFIG_FILE${RESET}"
   echo -e "  ${DIM}Template    : $SCRIPT_DIR/release-note-template.md${RESET}"
   echo ""
-  echo -e "  ${DIM}To re-run setup at any time: ./setup.sh${RESET}"
+  echo -e "  ${DIM}To re-run full setup: ./setup.sh${RESET}"
+  echo -e "  ${DIM}After a git pull, just run: ./setup.sh --update${RESET}"
+  echo ""
+}
+
+# ─── Update mode (after git pull) ────────────────────────────────────────────
+
+run_update() {
+  print_header
+
+  echo -e "  ${BOLD}Update mode${RESET} — rebuilding after git pull."
+  echo -e "  ${DIM}Your .env configuration is untouched.${RESET}"
+  echo ""
+
+  preflight_checks
+
+  # Check .env still exists
+  if [[ ! -f "$ENV_FILE" ]]; then
+    print_error ".env file not found at $ENV_FILE"
+    echo -e "  ${DIM}Looks like this is a fresh clone. Run ./setup.sh (without --update) instead.${RESET}"
+    exit 1
+  fi
+  print_success ".env found — configuration intact"
+
+  # Check if package.json dependencies changed
+  print_step "Checking dependencies"
+  if [[ ! -d "$SCRIPT_DIR/node_modules" ]]; then
+    print_info "node_modules missing — running npm install"
+    install_dependencies
+  else
+    print_info "Running npm install to pick up any new packages"
+    cd "$SCRIPT_DIR" && npm install --silent
+    print_success "Dependencies up to date"
+  fi
+
+  # Rebuild
+  build_project
+
+  echo ""
+  echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════╗${RESET}"
+  echo -e "${BOLD}${GREEN}║   Update complete!                                       ║${RESET}"
+  echo -e "${BOLD}${GREEN}╚══════════════════════════════════════════════════════════╝${RESET}"
+  echo ""
+  echo -e "  Plugin rebuilt successfully. Restart Claude Code to use the latest version."
+  echo ""
+  echo -e "  ${DIM}To do a full reconfiguration: ./setup.sh (without --update)${RESET}"
   echo ""
 }
 
 # ─── Main flow ────────────────────────────────────────────────────────────────
 
 main() {
+  # Handle --update / --upgrade flag for post-pull rebuilds
+  if [[ "${1:-}" == "--update" || "${1:-}" == "--upgrade" ]]; then
+    run_update
+    exit 0
+  fi
+
+  # Handle --help flag
+  if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    echo ""
+    echo -e "${BOLD}Azure DevOps Release Notes — Setup Script${RESET}"
+    echo ""
+    echo "  ./setup.sh            Full setup wizard (first time)"
+    echo "  ./setup.sh --update   Rebuild after git pull (keeps your .env)"
+    echo "  ./setup.sh --help     Show this help"
+    echo ""
+    exit 0
+  fi
+
   print_header
 
   preflight_checks
