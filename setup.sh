@@ -159,10 +159,26 @@ collect_azure_config() {
   print_info "Required scopes: Work Items (Read), Wiki (Read+Write), Queries (Read+Write)"
   echo ""
 
-  prompt_with_default PAT \
-    "Personal Access Token" \
-    "" \
-    true
+  local existing_pat
+  existing_pat=$(get_env_default AZURE_DEVOPS_PAT "")
+
+  if [[ -n "$existing_pat" ]]; then
+    print_info "PAT already configured — press Enter to keep existing, or type a new one."
+    printf "  Personal Access Token [keep existing]: "
+    read -rs input_pat
+    echo ""
+    if [[ -z "$input_pat" ]]; then
+      PAT="$existing_pat"
+      print_success "Keeping existing PAT"
+    else
+      PAT="$input_pat"
+    fi
+  else
+    prompt_with_default PAT \
+      "Personal Access Token" \
+      "" \
+      true
+  fi
 
   if [[ -z "$PAT" ]]; then
     print_error "PAT is required. Exiting."
