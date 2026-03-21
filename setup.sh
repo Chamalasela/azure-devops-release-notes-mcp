@@ -18,6 +18,7 @@ RED="\033[0;31m"
 RESET="\033[0m"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+USE_TSNODE=false   # set to true if build fails, falls back to ts-node
 ENV_FILE="$SCRIPT_DIR/.env"
 CLAUDE_CONFIG_DIR="$HOME/.claude"
 CLAUDE_CONFIG_FILE="$CLAUDE_CONFIG_DIR/claude_desktop_config.json"
@@ -292,8 +293,29 @@ build_project() {
   print_step "Building TypeScript"
 
   cd "$SCRIPT_DIR"
-  npm run build
-  print_success "Build complete → dist/"
+
+  # Pass --max-old-space-size to avoid heap OOM on machines with limited RAM
+  # (common on macOS with Apple Silicon running Node 22+)
+  if NODE_OPTIONS="--max-old-space-size=4096" npm run build; then
+    print_success "Build complete → dist/"
+  else
+    echo ""
+    print_error "TypeScript build failed."
+    echo ""
+    echo -e "  ${DIM}Common fixes:${RESET}"
+    echo -e "  ${DIM}1. Try building manually with more memory:${RESET}"
+    echo -e "  ${CYAN}     NODE_OPTIONS=--max-old-space-size=8192 npm run build${RESET}"
+    echo -e "  ${DIM}2. Or skip the build and use ts-node (dev mode):${RESET}"
+    echo -e "  ${CYAN}     npm run dev${RESET}"
+    echo -e "  ${DIM}3. Or use ts-node in your Claude Code config instead of node dist/index.js${RESET}"
+    echo ""
+    if confirm "Continue setup anyway (you can build manually later)?"; then
+      print_warning "Skipping build — Claude Code config will use ts-node instead."
+      USE_TSNODE=true
+    else
+      exit 1
+    fi
+  fi
 }
 
 # ─── Update Claude Code config ────────────────────────────────────────────────
@@ -302,7 +324,19 @@ update_claude_config() {
   print_step "Registering with Claude Code"
 
   local server_config
-  server_config=$(cat <<EOF
+  if [[ "${USE_TSNODE:-false}" == "true" ]]; then
+    # Build failed — fall back to ts-node (runs TypeScript directly, no build needed)
+    server_config=$(cat <<EOF
+{
+  "command": "npx",
+  "args": ["ts-node", "${SCRIPT_DIR}/src/index.ts"],
+  "cwd": "${SCRIPT_DIR}"
+}
+EOF
+)
+    print_info "Using ts-node mode (no compiled build required)"
+  else
+    server_config=$(cat <<EOF
 {
   "command": "node",
   "args": ["${SCRIPT_DIR}/dist/index.js"],
@@ -310,6 +344,7 @@ update_claude_config() {
 }
 EOF
 )
+  fi
 
   if [[ "$JQ_AVAILABLE" == "false" ]]; then
     echo ""
