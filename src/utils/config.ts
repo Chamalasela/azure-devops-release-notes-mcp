@@ -76,6 +76,17 @@ export function loadConfig(): PluginConfig {
   };
 }
 
+export function isUsingDefaultTemplate(config: PluginConfig): boolean {
+  return !process.env.RELEASE_NOTE_TEMPLATE_PATH && !process.env.RELEASE_NOTE_TEMPLATE_URL;
+}
+
+export function templateSourceLabel(config: PluginConfig): string {
+  if (process.env.RELEASE_NOTE_TEMPLATE_URL) {
+    return process.env.RELEASE_NOTE_TEMPLATE_URL;
+  }
+  return config.templatePath;
+}
+
 export function formatSprintName(format: string, sprintNumber: string): string {
   return format.replace("{{number}}", sprintNumber);
 }

@@ -255,60 +255,75 @@ const server = new McpServer({
   version: "1.0.0",
 });
 
-server.tool(
+server.registerTool(
   "generate_release_note",
-  "Fetch all work items for a sprint/iteration from Azure DevOps and display them for review. " +
-    "Call this first when the user runs /generate release note for <sprint>.",
-  { sprint_number: z.string().describe('The sprint or iteration number or name, e.g. "42", "Sprint 42"') },
-  ({ sprint_number }) => handleGenerateReleaseNote(sprint_number)
+  {
+    description:
+      "Fetch all work items for a sprint/iteration from Azure DevOps and display them for review. " +
+      "Call this first when the user runs /generate release note for <sprint>.",
+    inputSchema: { sprint_number: z.string().describe('The sprint or iteration number or name, e.g. "42", "Sprint 42"') } as any,
+  },
+  ({ sprint_number }: { sprint_number: string }) => handleGenerateReleaseNote(sprint_number)
 );
 
-server.tool(
+server.registerTool(
   "preview_release_note",
-  "Render the release note markdown preview using the configured template. " +
-    "Call this when the user says 'Proceed and view the release note'.",
   {
-    sprint_name: z.string().describe('The formatted sprint name, e.g. "Sprint 42"'),
-    iteration_path: z.string().describe('The full iteration path, e.g. "MyProject\\\\Sprint 42"'),
+    description:
+      "Render the release note markdown preview using the configured template. " +
+      "Call this when the user says 'Proceed and view the release note'.",
+    inputSchema: {
+      sprint_name: z.string().describe('The formatted sprint name, e.g. "Sprint 42"'),
+      iteration_path: z.string().describe('The full iteration path, e.g. "MyProject\\\\Sprint 42"'),
+    } as any,
   },
-  ({ sprint_name, iteration_path }) => handlePreviewReleaseNote(sprint_name, iteration_path)
+  ({ sprint_name, iteration_path }: { sprint_name: string; iteration_path: string }) =>
+    handlePreviewReleaseNote(sprint_name, iteration_path)
 );
 
-server.tool(
+server.registerTool(
   "publish_release_note",
-  "Create or update the release note wiki page in Azure DevOps. " +
-    "Call this when the user confirms they want to publish. " +
-    "If the page already exists, ask the user to confirm overwrite first.",
   {
-    sprint_name: z.string().describe('The formatted sprint name, e.g. "Sprint 42"'),
-    iteration_path: z.string().describe('The full iteration path, e.g. "MyProject\\\\Sprint 42"'),
-    confirmed_overwrite: z.boolean().optional().describe(
-      "Set to true if the user has explicitly confirmed overwriting an existing page"
-    ),
+    description:
+      "Create or update the release note wiki page in Azure DevOps. " +
+      "Call this when the user confirms they want to publish. " +
+      "If the page already exists, ask the user to confirm overwrite first.",
+    inputSchema: {
+      sprint_name: z.string().describe('The formatted sprint name, e.g. "Sprint 42"'),
+      iteration_path: z.string().describe('The full iteration path, e.g. "MyProject\\\\Sprint 42"'),
+      confirmed_overwrite: z.boolean().optional().describe(
+        "Set to true if the user has explicitly confirmed overwriting an existing page"
+      ),
+    } as any,
   },
-  ({ sprint_name, iteration_path, confirmed_overwrite }) =>
+  ({ sprint_name, iteration_path, confirmed_overwrite }: { sprint_name: string; iteration_path: string; confirmed_overwrite?: boolean }) =>
     handlePublishReleaseNote(sprint_name, iteration_path, confirmed_overwrite)
 );
 
-server.tool(
+server.registerTool(
   "validate_config",
-  "Validate the current .env configuration and show what is configured. " +
-    "Useful for troubleshooting setup issues.",
-  {},
+  {
+    description:
+      "Validate the current .env configuration and show what is configured. " +
+      "Useful for troubleshooting setup issues.",
+  },
   () => handleValidateConfig()
 );
 
-server.tool(
+server.registerTool(
   "set_template_source",
-  "Validate and preview a release note template from a URL or local file path. " +
-    "Supports local file paths, raw GitHub/GitLab URLs, and Azure DevOps Wiki page URLs. " +
-    "Call this when the user says 'use this template URL' or 'set my template to ...'.",
   {
-    source: z.string().describe(
-      "Template source: a local file path, remote URL, or Azure DevOps Wiki page URL"
-    ),
+    description:
+      "Validate and preview a release note template from a URL or local file path. " +
+      "Supports local file paths, raw GitHub/GitLab URLs, and Azure DevOps Wiki page URLs. " +
+      "Call this when the user says 'use this template URL' or 'set my template to ...'.",
+    inputSchema: {
+      source: z.string().describe(
+        "Template source: a local file path, remote URL, or Azure DevOps Wiki page URL"
+      ),
+    } as any,
   },
-  ({ source }) => handleSetTemplateSource(source)
+  ({ source }: { source: string }) => handleSetTemplateSource(source)
 );
 
 // ─── Start server ─────────────────────────────────────────────────────────────
