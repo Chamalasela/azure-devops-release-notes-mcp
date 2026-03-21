@@ -506,14 +506,11 @@ run_update() {
   if command -v claude &>/dev/null; then
     claude mcp list 2>/dev/null | grep -q "azure-devops-release-notes" && already_registered=true
   fi
-  if [[ "$already_registered" == "false" ]]; then
-    grep -q "azure-devops-release-notes" "$HOME/.claude.json" 2>/dev/null && already_registered=true
-  fi
 
   if [[ "$already_registered" == "true" ]]; then
     print_success "MCP server already registered"
   else
-    print_info "MCP server not found — registering for this machine"
+    print_info "MCP server not found in claude mcp list — registering for this machine"
     update_claude_config
   fi
 
