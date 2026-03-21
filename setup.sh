@@ -154,30 +154,29 @@ get_env_default() {
 collect_azure_config() {
   print_step "Azure DevOps credentials"
   echo ""
-  print_info "You'll need a Personal Access Token (PAT) from Azure DevOps."
-  print_info "Go to: dev.azure.com → User Settings → Personal Access Tokens"
-  print_info "Required scopes: Work Items (Read), Wiki (Read+Write), Queries (Read+Write)"
-  echo ""
 
+  # If a PAT already exists in .env, reuse it silently — never re-prompt for security
   local existing_pat
   existing_pat=$(get_env_default AZURE_DEVOPS_PAT "")
 
   if [[ -n "$existing_pat" ]]; then
-    print_info "PAT already configured — press Enter to keep existing, or type a new one."
-    printf "  Personal Access Token [keep existing]: "
-    read -rs input_pat
+    PAT="$existing_pat"
+    print_success "PAT loaded from existing .env (${#PAT} chars) — press Enter to keep it, or paste a new one:"
+    printf "  New Personal Access Token (leave blank to keep existing): "
+    read -rs new_pat
     echo ""
-    if [[ -z "$input_pat" ]]; then
-      PAT="$existing_pat"
-      print_success "Keeping existing PAT"
+    if [[ -n "$new_pat" ]]; then
+      PAT="$new_pat"
+      print_info "Using new PAT."
     else
-      PAT="$input_pat"
+      print_info "Keeping existing PAT."
     fi
   else
-    prompt_with_default PAT \
-      "Personal Access Token" \
-      "" \
-      true
+    print_info "You'll need a Personal Access Token (PAT) from Azure DevOps."
+    print_info "Go to: dev.azure.com → User Settings → Personal Access Tokens"
+    print_info "Required scopes: Work Items (Read), Wiki (Read+Write), Queries (Read+Write)"
+    echo ""
+    prompt_with_default PAT       "Personal Access Token"       ""       true
   fi
 
   if [[ -z "$PAT" ]]; then
@@ -339,64 +338,78 @@ build_project() {
 update_claude_config() {
   print_step "Registering with Claude Code"
 
-  local server_config
+  local cmd
+  local args
+
   if [[ "${USE_TSNODE:-false}" == "true" ]]; then
-    # Build failed — fall back to ts-node (runs TypeScript directly, no build needed)
-    server_config=$(cat <<EOF
-{
-  "command": "npx",
-  "args": ["ts-node", "${SCRIPT_DIR}/src/index.ts"],
-  "cwd": "${SCRIPT_DIR}"
-}
-EOF
-)
+    cmd="npx"
+    args="ts-node ${SCRIPT_DIR}/src/index.ts"
     print_info "Using ts-node mode (no compiled build required)"
   else
-    server_config=$(cat <<EOF
-{
-  "command": "node",
-  "args": ["${SCRIPT_DIR}/dist/index.js"],
-  "cwd": "${SCRIPT_DIR}"
-}
-EOF
-)
+    cmd="node"
+    args="${SCRIPT_DIR}/dist/index.js"
+  fi
+
+  # ── Method 1: use the official claude mcp add command (Claude Code CLI) ──────
+  if command -v claude &>/dev/null; then
+    # Remove existing entry first to avoid duplicates, then re-add
+    claude mcp remove azure-devops-release-notes --scope user 2>/dev/null || true
+
+    if [[ "${USE_TSNODE:-false}" == "true" ]]; then
+      claude mcp add azure-devops-release-notes         --scope user         -- npx ts-node "${SCRIPT_DIR}/src/index.ts" 2>/dev/null && {
+        print_success "MCP server registered via: claude mcp add"
+        return
+      }
+    else
+      claude mcp add azure-devops-release-notes         --scope user         -- node "${SCRIPT_DIR}/dist/index.js" 2>/dev/null && {
+        print_success "MCP server registered via: claude mcp add"
+        return
+      }
+    fi
+    print_warning "claude mcp add failed — falling back to direct config file edit"
+  fi
+
+  # ── Method 2: write ~/.claude.json directly (Claude Code stores MCP here) ────
+  local claude_json="$HOME/.claude.json"
+
+  if [[ ! -f "$claude_json" ]]; then
+    echo "{}" > "$claude_json"
+    print_info "Created $claude_json"
   fi
 
   if [[ "$JQ_AVAILABLE" == "false" ]]; then
     echo ""
-    print_warning "jq not found — please add the following to your Claude Code MCP config manually:"
+    print_warning "jq not found — please register the MCP server manually."
     echo ""
-    echo -e "${DIM}  File: ${CLAUDE_CONFIG_FILE}${RESET}"
+    print_info "Run this command:"
     echo ""
-    echo '  {
-    "mcpServers": {
-      "azure-devops-release-notes": '"$server_config"'
-    }
-  }'
+    if [[ "${USE_TSNODE:-false}" == "true" ]]; then
+      echo -e "  ${CYAN}claude mcp add azure-devops-release-notes --scope user -- npx ts-node ${SCRIPT_DIR}/src/index.ts${RESET}"
+    else
+      echo -e "  ${CYAN}claude mcp add azure-devops-release-notes --scope user -- node ${SCRIPT_DIR}/dist/index.js${RESET}"
+    fi
     echo ""
     return
   fi
 
-  mkdir -p "$CLAUDE_CONFIG_DIR"
+  # Back up
+  cp "$claude_json" "${claude_json}.backup" 2>/dev/null || true
 
-  if [[ ! -f "$CLAUDE_CONFIG_FILE" ]]; then
-    echo '{"mcpServers":{}}' > "$CLAUDE_CONFIG_FILE"
-    print_info "Created new Claude Code config file."
+  local server_config
+  if [[ "${USE_TSNODE:-false}" == "true" ]]; then
+    server_config="{"command":"npx","args":["ts-node","${SCRIPT_DIR}/src/index.ts"],"cwd":"${SCRIPT_DIR}"}"
+  else
+    server_config="{"command":"node","args":["${SCRIPT_DIR}/dist/index.js"],"cwd":"${SCRIPT_DIR}"}"
   fi
 
-  # Back up existing config
-  cp "$CLAUDE_CONFIG_FILE" "${CLAUDE_CONFIG_FILE}.backup"
-  print_info "Backed up existing config to $(basename "$CLAUDE_CONFIG_FILE").backup"
-
-  # Merge the new server entry
   local updated
-  updated=$(jq \
-    --argjson config "$server_config" \
-    '.mcpServers["azure-devops-release-notes"] = $config' \
-    "$CLAUDE_CONFIG_FILE")
+  updated=$(jq     --argjson config "$server_config"     '.mcpServers["azure-devops-release-notes"] = $config'     "$claude_json" 2>/dev/null) || {
+    print_error "Failed to update $claude_json — please register manually (see above)"
+    return
+  }
 
-  echo "$updated" > "$CLAUDE_CONFIG_FILE"
-  print_success "Claude Code config updated: $CLAUDE_CONFIG_FILE"
+  echo "$updated" > "$claude_json"
+  print_success "MCP server registered in: $claude_json"
 }
 
 # ─── Validate connection ──────────────────────────────────────────────────────
@@ -484,6 +497,25 @@ run_update() {
 
   # Rebuild
   build_project
+
+  # Always register with Claude Code — may be missing on a new machine
+  print_step "Checking Claude Code registration"
+
+  # Check both possible config locations
+  local already_registered=false
+  if command -v claude &>/dev/null; then
+    claude mcp list 2>/dev/null | grep -q "azure-devops-release-notes" && already_registered=true
+  fi
+  if [[ "$already_registered" == "false" ]]; then
+    grep -q "azure-devops-release-notes" "$HOME/.claude.json" 2>/dev/null && already_registered=true
+  fi
+
+  if [[ "$already_registered" == "true" ]]; then
+    print_success "MCP server already registered"
+  else
+    print_info "MCP server not found — registering for this machine"
+    update_claude_config
+  fi
 
   echo ""
   echo -e "${BOLD}${GREEN}╔══════════════════════════════════════════════════════════╗${RESET}"
