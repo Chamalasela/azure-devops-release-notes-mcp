@@ -206,7 +206,7 @@ collect_workitem_config() {
 
   prompt_with_default ITERATION_PATH_PREFIX \
     "Iteration path prefix" \
-    "$(get_env_default AZURE_DEVOPS_ITERATION_PATH_PREFIX "$PROJECT")"
+    "$(get_env_default AZURE_DEVOPS_ITERATION_PATH_PREFIX "${PROJECT:-}")"
 
   prompt_with_default SHARED_QUERY_PATH \
     "Shared query folder path" \
@@ -548,8 +548,8 @@ main() {
   echo -e "  ${DIM}Press Enter to accept the value shown in [brackets].${RESET}"
 
   collect_azure_config
-  collect_workitem_config
   collect_wiki_config
+  collect_workitem_config
 
   echo ""
   echo -e "${BOLD}  Ready to set up with these values:${RESET}"
