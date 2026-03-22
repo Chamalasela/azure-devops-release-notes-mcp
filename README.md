@@ -28,8 +28,13 @@ cd azure-devops-release-notes-mcp
 ### 2. Run the setup wizard
 
 ```bash
+chmod +x setup.sh
 ./setup.sh
 ```
+
+> **Note:** If you get a *permission denied* error, the script is not yet marked as executable.
+> Run `chmod +x setup.sh` once before executing it. This is common after a fresh `git clone`
+> on macOS/Linux if the execute bit was not preserved.
 
 The wizard will ask you a series of questions (Azure DevOps org, project, PAT token etc.),
 install dependencies, build the project, test your connection, and register the plugin
