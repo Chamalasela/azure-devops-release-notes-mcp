@@ -208,6 +208,10 @@ collect_workitem_config() {
     "Iteration path prefix" \
     "$(get_env_default AZURE_DEVOPS_ITERATION_PATH_PREFIX "${PROJECT:-}")"
 
+  echo ""
+  print_info "Optional: Azure DevOps folder where a shared query will be saved after each run."
+  echo ""
+
   prompt_with_default SHARED_QUERY_PATH \
     "Shared query folder path" \
     "$(get_env_default AZURE_DEVOPS_SHARED_QUERY_PATH "Shared Queries/Release Notes")"
