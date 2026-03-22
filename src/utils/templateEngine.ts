@@ -104,25 +104,21 @@ export function renderTemplate(templatePath: string, data: ReleaseNoteData): str
 
 export function formatWorkItemsTable(workItems: WorkItem[]): string {
   if (workItems.length === 0) {
-    return "  No work items found for this iteration.";
+    return "No work items found for this iteration.";
   }
 
   const lines: string[] = [
-    `  Found ${workItems.length} work item(s):\n`,
-    `  ${"─".repeat(88)}`,
-    `  ${"ID".padEnd(8)} ${"Type".padEnd(14)} ${"State".padEnd(16)} ${"Assigned To".padEnd(22)} Title`,
-    `  ${"─".repeat(88)}`,
+    `Found **${workItems.length}** work item(s):\n`,
+    `| ID | Type | Title |`,
+    `|----|------|-------|`,
   ];
 
   for (const wi of workItems) {
-    const id = `#${wi.id}`.padEnd(8);
-    const type = wi.workItemType.padEnd(14);
-    const state = wi.state.padEnd(16);
-    const assignedTo = (wi.assignedTo || "Unassigned").slice(0, 20).padEnd(22);
-    const title = wi.title.slice(0, 48) + (wi.title.length > 48 ? "…" : "");
-    lines.push(`  ${id} ${type} ${state} ${assignedTo} ${title}`);
+    const id = `[#${wi.id}](${wi.url})`;
+    const type = wi.workItemType;
+    const title = wi.title.replace(/\|/g, "\\|");
+    lines.push(`| ${id} | ${type} | ${title} |`);
   }
 
-  lines.push(`  ${"─".repeat(88)}`);
   return lines.join("\n");
 }

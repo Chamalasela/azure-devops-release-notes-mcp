@@ -10,4 +10,4 @@ If no sprint name was provided (i.e. $ARGUMENTS is empty):
 
 Use the `generate_release_note` MCP tool with the sprint argument: $ARGUMENTS
 
-After showing the work items summary, ask the user if they want to proceed and view the release note.
+After the tool responds, display the **complete work items table** exactly as returned — do not summarise or collapse it. Then ask the user if they want to proceed and view the release note preview.
