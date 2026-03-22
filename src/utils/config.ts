@@ -9,7 +9,6 @@ export interface PluginConfig {
   wikiId: string;
   wikiBasePath: string;
   iterationPathPrefix: string;
-  sprintNameFormat: string;
   workItemTypes: string[];
   sharedQueryPath: string;
   releaseNoteNameFormat: string;
@@ -82,18 +81,12 @@ export function loadConfig(): PluginConfig {
     wikiBasePath: basePath,
     iterationPathPrefix:
       process.env.AZURE_DEVOPS_ITERATION_PATH_PREFIX || project,
-    sprintNameFormat:
-      process.env.AZURE_DEVOPS_SPRINT_NAME_FORMAT || "Sprint {{number}}",
     workItemTypes,
     sharedQueryPath:
       process.env.AZURE_DEVOPS_SHARED_QUERY_PATH || "Shared Queries/Release Notes",
     releaseNoteNameFormat:
       process.env.RELEASE_NOTE_NAME_FORMAT || "{{sprintName}}",
   };
-}
-
-export function formatSprintName(format: string, sprintNumber: string): string {
-  return format.replace("{{number}}", sprintNumber);
 }
 
 export function formatPageName(format: string, sprintName: string): string {

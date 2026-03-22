@@ -152,12 +152,11 @@ export async function validateConnection(
       `| Organization | \`${config.org}\` |`,
       `| Project | \`${config.project}\` |`,
       `| Iteration prefix | \`${config.iterationPathPrefix}\` |`,
-      `| Sprint format | \`${config.sprintNameFormat}\` |`,
       `| Work item types | \`${config.workItemTypes.join(", ")}\` |`,
       ``,
       wikiStatus,
       ``,
-      `You're all set. Try: \`/generate release note for <sprint number>\``,
+      `You're all set. Try: \`/generate release note for <sprint name>\``,
     ].join("\n");
 
     return { success: true, message };

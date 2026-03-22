@@ -21,7 +21,7 @@ function text(str: string): { content: Array<{ type: "text"; text: string }> } {
 
 // ─── Tool handlers (named functions with explicit return types) ───────────────
 
-async function handleGenerateReleaseNote(sprint_number: string): ToolResult {
+async function handleGenerateReleaseNote(sprint_name: string): ToolResult {
   let config;
   try {
     config = loadConfig();
@@ -33,7 +33,7 @@ async function handleGenerateReleaseNote(sprint_number: string): ToolResult {
     );
   }
 
-  const result = await generateReleaseNote(config, sprint_number);
+  const result = await generateReleaseNote(config, sprint_name);
 
   if (result.step === "error") {
     return text(result.message);
@@ -165,11 +165,10 @@ async function handleValidateConfig(): ToolResult {
       `| Wiki Base Path | \`${config.wikiBasePath}\` |`,
       `| Release Note Name Format | \`${config.releaseNoteNameFormat}\` |`,
       `| Iteration Path Prefix | \`${config.iterationPathPrefix}\` |`,
-      `| Sprint Name Format | \`${config.sprintNameFormat}\` |`,
       `| Work Item Types | \`${config.workItemTypes.join(", ")}\` |`,
       ``,
       `All required settings are present. You can now run:`,
-      `\`/generate release note for <sprint number>\``,
+      `\`/generate release note for <sprint name>\``,
     ].join("\n");
     return text(output);
   } catch (err: unknown) {
@@ -197,9 +196,9 @@ server.registerTool(
     description:
       "Fetch all work items for a sprint/iteration from Azure DevOps and display them for review. " +
       "Call this first when the user runs /generate release note for <sprint>.",
-    inputSchema: { sprint_number: z.string().describe('The sprint or iteration number or name, e.g. "42", "Sprint 42"') } as any,
+    inputSchema: { sprint_name: z.string().describe('The sprint or iteration name exactly as it appears in Azure DevOps, e.g. "Sprint 42", "Iteration 5", "PI3 Sprint 2", "2024.Q1"') } as any,
   },
-  ({ sprint_number }: { sprint_number: string }) => handleGenerateReleaseNote(sprint_number)
+  ({ sprint_name }: { sprint_name: string }) => handleGenerateReleaseNote(sprint_name)
 );
 
 server.registerTool(

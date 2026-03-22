@@ -1,7 +1,6 @@
 import * as path from "path";
 import {
   PluginConfig,
-  formatSprintName,
   formatPageName,
   buildIterationPath,
 } from "../utils/config.js";
@@ -41,10 +40,9 @@ export interface GenerateResult {
 
 export async function generateReleaseNote(
   config: PluginConfig,
-  sprintNumber: string
+  sprintName: string
 ): Promise<GenerateResult> {
   try {
-    const sprintName = formatSprintName(config.sprintNameFormat, sprintNumber);
     const iterationPath = buildIterationPath(config.iterationPathPrefix, sprintName);
     const pageName = formatPageName(config.releaseNoteNameFormat, sprintName);
     const pagePath = buildWikiPagePath(config.wikiBasePath, pageName);
