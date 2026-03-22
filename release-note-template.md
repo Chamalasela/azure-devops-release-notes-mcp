@@ -20,75 +20,50 @@
 
 ## 🚀 Features
 
+| ID | Title | State | Assigned To |
+|----|-------|-------|-------------|
 {{#each features}}
-### {{this.id}} — {{this.title}}
-
-- **State:** {{this.state}}
-- **Assigned To:** {{this.assignedTo}}
-{{#if this.description}}
-- **Description:** {{this.description}}
-{{/if}}
-
+| [#{{this.id}}]({{this.url}}) | {{this.title}} | {{this.state}} | {{this.assignedTo}} |
 {{/each}}
 {{/if}}
 {{#if userStories}}
 
 ## 📖 User Stories
 
+| ID | Title | State | Assigned To |
+|----|-------|-------|-------------|
 {{#each userStories}}
-### {{this.id}} — {{this.title}}
-
-- **State:** {{this.state}}
-- **Assigned To:** {{this.assignedTo}}
-{{#if this.description}}
-- **Description:** {{this.description}}
-{{/if}}
-
+| [#{{this.id}}]({{this.url}}) | {{this.title}} | {{this.state}} | {{this.assignedTo}} |
 {{/each}}
 {{/if}}
 {{#if bugs}}
 
 ## 🐛 Bug Fixes
 
+| ID | Title | State | Assigned To |
+|----|-------|-------|-------------|
 {{#each bugs}}
-### {{this.id}} — {{this.title}}
-
-- **State:** {{this.state}}
-- **Assigned To:** {{this.assignedTo}}
-{{#if this.description}}
-- **Description:** {{this.description}}
-{{/if}}
-
+| [#{{this.id}}]({{this.url}}) | {{this.title}} | {{this.state}} | {{this.assignedTo}} |
 {{/each}}
 {{/if}}
 {{#if tasks}}
 
 ## ✅ Tasks
 
+| ID | Title | State | Assigned To |
+|----|-------|-------|-------------|
 {{#each tasks}}
-### {{this.id}} — {{this.title}}
-
-- **State:** {{this.state}}
-- **Assigned To:** {{this.assignedTo}}
-{{#if this.description}}
-- **Description:** {{this.description}}
-{{/if}}
-
+| [#{{this.id}}]({{this.url}}) | {{this.title}} | {{this.state}} | {{this.assignedTo}} |
 {{/each}}
 {{/if}}
 {{#if epics}}
 
 ## 🏔️ Epics
 
+| ID | Title | State | Assigned To |
+|----|-------|-------|-------------|
 {{#each epics}}
-### {{this.id}} — {{this.title}}
-
-- **State:** {{this.state}}
-- **Assigned To:** {{this.assignedTo}}
-{{#if this.description}}
-- **Description:** {{this.description}}
-{{/if}}
-
+| [#{{this.id}}]({{this.url}}) | {{this.title}} | {{this.state}} | {{this.assignedTo}} |
 {{/each}}
 {{/if}}
 
