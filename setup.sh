@@ -553,7 +553,7 @@ main() {
 
   echo ""
   echo -e "${BOLD}  Ready to set up with these values:${RESET}"
-  echo -e "  ${DIM}Org: $ORG | Project: $PROJECT | Wiki: $WIKI_IDENTIFIER${RESET}"
+  echo -e "  ${DIM}Wiki URL: $WIKI_URL${RESET}"
   echo -e "  ${DIM}Work item types: $WORK_ITEM_TYPES${RESET}"
   echo ""
 
