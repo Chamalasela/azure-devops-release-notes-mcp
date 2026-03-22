@@ -1,4 +1,10 @@
-import { PluginConfig, formatSprintName, buildIterationPath } from "../utils/config.js";
+import * as path from "path";
+import {
+  PluginConfig,
+  formatSprintName,
+  formatPageName,
+  buildIterationPath,
+} from "../utils/config.js";
 import {
   buildReleaseNoteData,
   renderTemplate,
@@ -18,6 +24,9 @@ import {
   buildWikiUrl,
 } from "../services/wiki.js";
 
+// Resolve bundled template relative to compiled output (dist/commands/ → project root)
+const TEMPLATE_PATH = path.resolve(__dirname, "../../release-note-template.md");
+
 export interface GenerateResult {
   step: "work_items" | "preview" | "published" | "cancelled" | "error";
   message: string;
@@ -26,6 +35,7 @@ export interface GenerateResult {
   wikiUrl?: string;
   sprintName?: string;
   iterationPath?: string;
+  pagePath?: string;
   wiql?: string;
 }
 
@@ -34,16 +44,13 @@ export async function generateReleaseNote(
   sprintNumber: string
 ): Promise<GenerateResult> {
   try {
-    // Build sprint name and iteration path
     const sprintName = formatSprintName(config.sprintNameFormat, sprintNumber);
-    const iterationPath = buildIterationPath(
-      config.iterationPathPrefix,
-      sprintName
-    );
+    const iterationPath = buildIterationPath(config.iterationPathPrefix, sprintName);
+    const pageName = formatPageName(config.releaseNoteNameFormat, sprintName);
+    const pagePath = buildWikiPagePath(config.wikiBasePath, pageName);
 
     const client = createAzureDevOpsClient(config);
 
-    // Build WIQL and fetch work items
     const wiql = buildWiqlQuery(iterationPath, config.workItemTypes, config.project);
     const workItems = await fetchWorkItemsByWiql(client, config, wiql);
 
@@ -51,7 +58,6 @@ export async function generateReleaseNote(
 
     // Save as shared query (best-effort, don't fail if it errors)
     const savedQuery = await saveSharedQuery(client, config, sprintName, wiql);
-
     let sharedQueryNote = "";
     if (savedQuery) {
       sharedQueryNote = `\n  📎 Shared query saved: ${savedQuery.url}`;
@@ -60,11 +66,11 @@ export async function generateReleaseNote(
     return {
       step: "work_items",
       message:
-        `  ✅ Work items fetched for iteration: ${iterationPath}` +
-        sharedQueryNote,
+        `  ✅ Work items fetched for iteration: ${iterationPath}` + sharedQueryNote,
       workItemsTable,
       sprintName,
       iterationPath,
+      pagePath,
       wiql,
     };
   } catch (err: unknown) {
@@ -89,13 +95,11 @@ export async function previewReleaseNote(
     const wiql = buildWiqlQuery(iterationPath, config.workItemTypes, config.project);
     const workItems = await fetchWorkItemsByWiql(client, config, wiql);
 
-    const data = buildReleaseNoteData(
-      sprintName,
-      iterationPath,
-      config.project,
-      workItems
-    );
-    const markdown = renderTemplate(config.templatePath, data);
+    const data = buildReleaseNoteData(sprintName, iterationPath, config.project, workItems);
+    const markdown = renderTemplate(TEMPLATE_PATH, data);
+
+    const pageName = formatPageName(config.releaseNoteNameFormat, sprintName);
+    const pagePath = buildWikiPagePath(config.wikiBasePath, pageName);
 
     return {
       step: "preview",
@@ -103,6 +107,7 @@ export async function previewReleaseNote(
       previewMarkdown: markdown,
       sprintName,
       iterationPath,
+      pagePath,
     };
   } catch (err: unknown) {
     const error = err as { message?: string; response?: { data?: { message?: string }; status?: number } };
@@ -125,21 +130,13 @@ export async function publishReleaseNote(
     const wiql = buildWiqlQuery(iterationPath, config.workItemTypes, config.project);
     const workItems = await fetchWorkItemsByWiql(client, config, wiql);
 
-    const data = buildReleaseNoteData(
-      sprintName,
-      iterationPath,
-      config.project,
-      workItems
-    );
-    const markdown = renderTemplate(config.templatePath, data);
-    const pagePath = buildWikiPagePath(config.wikiPathPrefix, sprintName);
+    const data = buildReleaseNoteData(sprintName, iterationPath, config.project, workItems);
+    const markdown = renderTemplate(TEMPLATE_PATH, data);
 
-    // Check if page already exists
-    const { exists, eTag } = await checkWikiPageExists(
-      client,
-      config,
-      pagePath
-    );
+    const pageName = formatPageName(config.releaseNoteNameFormat, sprintName);
+    const pagePath = buildWikiPagePath(config.wikiBasePath, pageName);
+
+    const { exists, eTag } = await checkWikiPageExists(client, config, pagePath);
 
     let result;
     if (exists && eTag) {
@@ -149,6 +146,7 @@ export async function publishReleaseNote(
         step: "published",
         message: `  ✅ Wiki page updated successfully.`,
         wikiUrl,
+        pagePath,
       };
     } else {
       result = await createWikiPage(client, config, pagePath, markdown);
@@ -157,6 +155,7 @@ export async function publishReleaseNote(
         step: "published",
         message: `  ✅ Wiki page created successfully.`,
         wikiUrl,
+        pagePath,
       };
     }
   } catch (err: unknown) {
@@ -183,7 +182,7 @@ function buildErrorMessage(status: number | undefined, detail: string): string {
   if (status === 404) {
     return (
       `  ❌ Resource not found (HTTP 404).\n` +
-      `  Check your AZURE_DEVOPS_ORG, AZURE_DEVOPS_PROJECT, and iteration path.\n` +
+      `  Check your AZURE_DEVOPS_WIKI_URL and iteration path in .env.\n` +
       `  Detail: ${detail}`
     );
   }

@@ -83,28 +83,22 @@ export async function updateWikiPage(
   };
 }
 
-export function buildWikiPagePath(
-  wikiPathPrefix: string,
-  sprintName: string
-): string {
-  // Normalise prefix: ensure it starts with / and has no trailing /
-  const prefix = wikiPathPrefix.startsWith("/")
-    ? wikiPathPrefix
-    : `/${wikiPathPrefix}`;
-  const cleanPrefix = prefix.replace(/\/$/, "");
+export function buildWikiPagePath(wikiBasePath: string, pageName: string): string {
+  // Normalise base path: ensure it starts with / and has no trailing /
+  const base = wikiBasePath.startsWith("/") ? wikiBasePath : `/${wikiBasePath}`;
+  const cleanBase = base.replace(/\/$/, "");
 
-  // Sanitise sprint name for wiki path (replace spaces with -)
-  const sanitisedSprint = sprintName.replace(/\s+/g, "-");
+  // Sanitise page name: replace spaces with hyphens
+  const sanitisedName = pageName.replace(/\s+/g, "-");
 
-  return `${cleanPrefix}/${sanitisedSprint}`;
+  return `${cleanBase}/${sanitisedName}`;
 }
 
 export function buildWikiUrl(config: PluginConfig, pagePath: string): string {
-  const encodedPath = pagePath
-    .split("/")
-    .map((p) => encodeURIComponent(p))
-    .join("/");
-  return `https://dev.azure.com/${config.org}/${encodeURIComponent(
-    config.project
-  )}/_wiki/wikis/${encodeURIComponent(config.wikiId)}${encodedPath}`;
+  return (
+    `https://dev.azure.com/${config.org}` +
+    `/${encodeURIComponent(config.project)}` +
+    `/_wiki/wikis/${encodeURIComponent(config.wikiId)}` +
+    `?pagePath=${encodeURIComponent(pagePath)}`
+  );
 }
