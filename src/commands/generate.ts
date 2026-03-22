@@ -184,5 +184,29 @@ function buildErrorMessage(status: number | undefined, detail: string): string {
       `  Detail: ${detail}`
     );
   }
+  if (status === 400 && detail.includes("TF51011")) {
+    const pathMatch = detail.match(/[«"']([^»"']+)[»"']/);
+    if (pathMatch) {
+      const path = pathMatch[1];
+      const segments = path.split("\\");
+      const last = segments[segments.length - 1];
+      const secondLast = segments[segments.length - 2];
+      if (last === secondLast) {
+        return (
+          `  ❌ Azure DevOps API error (HTTP 400): Iteration path not found.\n` +
+          `  The path "${path}" has a duplicated segment — "${last}" appears twice.\n` +
+          `  Your AZURE_DEVOPS_ITERATION_PATH_PREFIX already ends with the sprint name.\n` +
+          `  Fix: Remove "\\${last}" from the end of AZURE_DEVOPS_ITERATION_PATH_PREFIX in your .env.\n` +
+          `  It should be the parent path only, e.g. "DeveloperExperience\\Developer Portal".`
+        );
+      }
+    }
+    return (
+      `  ❌ Azure DevOps API error (HTTP 400): Iteration path not found.\n` +
+      `  Check that AZURE_DEVOPS_ITERATION_PATH_PREFIX in your .env is the parent path\n` +
+      `  (without the sprint name). The sprint name is appended automatically.\n` +
+      `  Detail: ${detail}`
+    );
+  }
   return `  ❌ Azure DevOps API error${status ? ` (HTTP ${status})` : ""}: ${detail}`;
 }

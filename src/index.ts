@@ -153,6 +153,18 @@ async function handlePublishReleaseNote(
 async function handleValidateConfig(): ToolResult {
   try {
     const config = loadConfig();
+    const prefixLooksLikeSprint = /[\\\/](\d{4}-\d{2}|\d{4}\.\d+|Sprint\s*\d+)$/i.test(
+      config.iterationPathPrefix
+    );
+    const prefixWarning = prefixLooksLikeSprint
+      ? [
+          ``,
+          `> ⚠️  **Warning:** \`AZURE_DEVOPS_ITERATION_PATH_PREFIX\` ends with what looks like a sprint name.`,
+          `> This will cause duplicated path segments (e.g. \`…\\2026-03\\2026-03\`) and a 400 error.`,
+          `> The prefix should be the **parent** path only — remove the trailing sprint segment from your \`.env\`.`,
+        ].join("\n")
+      : "";
+
     const output = [
       `## ✅ Configuration Valid`,
       ``,
@@ -166,6 +178,7 @@ async function handleValidateConfig(): ToolResult {
       `| Release Note Name Format | \`${config.releaseNoteNameFormat}\` |`,
       `| Iteration Path Prefix | \`${config.iterationPathPrefix}\` |`,
       `| Work Item Types | \`${config.workItemTypes.join(", ")}\` |`,
+      prefixWarning,
       ``,
       `All required settings are present. You can now run:`,
       `\`/generate release note for <sprint name>\``,
